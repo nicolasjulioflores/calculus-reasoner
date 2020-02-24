@@ -1,6 +1,4 @@
-module Lib
-    ( someFunc
-    ) where
+module Lib where
 
 someFunc :: IO ()
 someFunc = putStrLn "someFunc"
@@ -9,7 +7,7 @@ someFunc = putStrLn "someFunc"
 data Expr = Atom Atom
           | Unary String Expr
           | Binary String Expr Expr
-          | Derive Variable Expr
+          | Derive Variable Expr deriving (Show, Eq)
 data Atom = Var Variable 
           | Const Float deriving (Show, Eq)
 type Variable = String
@@ -31,8 +29,8 @@ ex2 = Binary "*" (Derive "x" $ Binary "pow" (Atom $ Var "x") (Atom $ Const 2.0))
 
 {- Derivative Laws -}
 a, b :: Expr -- Is this a good way to represent arbitrary expressions? These can be replaced by any expression
-a = undefined
-b = undefined
+a = Atom $ Var "a"
+b = Atom $ Var "b"
 
 add_rule = Law "Derivative of (+)"
                 (Derive "x" $ Binary "+" a b, Binary "+" (Derive "x" a) (Derive "x" b))
@@ -66,6 +64,7 @@ self_rule = Law "Derivative of x" (Derive "x" $ Atom (Var "x"), Atom $ Const 1.0
 -- isConstant :: Expr -> Bool
 const_rule = Law "Derivative of c" (Derive "x" a, Atom $ Const 0.0) 
 
+laws = [add_rule, sub_rule, prod_rule, quot_rule, sin_rule, cos_rule, ln_rule, pow_rule, self_rule, const_rule]
 
 -- Don't think we need anything below
 {- Example Laws -}
