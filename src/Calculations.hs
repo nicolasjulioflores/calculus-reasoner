@@ -1,10 +1,8 @@
 module Calculations where
 import Lib
 import Rewrites
-        -- import Rewrites
-        -- import Utilities
 
-data Calculation = Calc Expr [Step]
+data Calculation = Calc Expr [Step] deriving Show
 type Step = (LawName, Expr)
 
 calculate :: [Law] -> Expr -> Calculation

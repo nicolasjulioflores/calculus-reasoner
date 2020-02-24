@@ -17,6 +17,11 @@ type LawName = String
 type Equation = (Expr, Expr)
 
 {- Examples -}
+-- 1. d/dx (x + y)
+ex :: Expr
+ex = Derive "x" $ Binary "+" (Atom $ Var "x") (Atom $ Const 1.0)
+
+
 -- 1. d/dx (sin (x ^ 2))
 ex1 :: Expr
 ex1 = Derive "x" $ Unary "sin" (Binary "pow" (Atom $ Var "x") (Atom $ Const 2.0))

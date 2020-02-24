@@ -20,17 +20,9 @@ applyA sub c = Atom c -- "Constants are preserved"
 
 binding :: Subst -> Variable -> Expr
 binding sub v = fromJust (lookup v sub)
-
-
-
-
-
-
--- [] is used as a Maybe type here
-unify :: Subst -> Subst -> [Subst]
-unify sub1 sub2 = if compatible sub1 sub2
-                  then [union sub1 sub2]
-                  else []
+-- binding sub v = case lookup v sub of
+--     Just e  -> e
+--     Nothing -> Atom $ Var v
 
 compatible :: Subst -> Subst -> Bool
 compatible [] sub2 = True
@@ -47,4 +39,17 @@ union sub1@((v1,e1):sub1') sub2@((v2,e2):sub2')
     | v1<v2  = (v1,e1):union sub1' sub2
     | v1==v2 = (v1,e1):union sub1' sub2'
     | v1>v2  = (v2,e2):union sub1  sub2'
+
+
+
+
+
+
+-- [] is used as a Maybe type here
+unify :: Subst -> Subst -> [Subst]
+unify sub1 sub2 = if compatible sub1 sub2
+                  then [union sub1 sub2]
+                  else []
+
+
                                                         
