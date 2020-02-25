@@ -7,14 +7,43 @@ someFunc = putStrLn "someFunc"
 data Expr = Atom Atom
           | Unary String Expr
           | Binary String Expr Expr
-          | Derive Variable Expr deriving (Show, Eq)
+          | Derive Variable Expr deriving Eq
 data Atom = Var Variable 
-          | Const Float deriving (Show, Eq)
+          | Const Float deriving Eq
 type Variable = String
+
+data Claw = Claw Condition Law
 
 data Law = Law LawName Equation
 type LawName = String
 type Equation = (Expr, Expr)
+type Condition = Expr -> Bool
+
+instance Show Atom where
+    showsPrec _ (Var v) = showString v
+    showsPrec _ (Const f) = showString (show f)
+
+instance Show Expr where
+    showsPrec _ (Atom a) = showsPrec 0 a
+    showsPrec _ (Unary op e) 
+      = showString op . showParen (True) (showsPrec 0 e)
+    showsPrec _ (Derive v e)
+      = showString "d/d" . showString v . showParen (True) (showsPrec 0 e)
+    showsPrec p (Binary op e1 e2)
+      = showParen (p == 1) (showsPrec 1 e1 . showString " " . showString op . showString " " . showsPrec 1 e2)
+
+
+alwaysTrue :: Expr -> Bool
+alwaysTrue _ = True
+
+isConstant :: Expr -> Bool
+isConstant (Atom a) = case a of
+                        Var _ -> False
+                        Const _ -> True
+isConstant (Unary _ e) = isConstant e
+isConstant (Binary _ e1 e2) = (isConstant e1) && (isConstant e2)
+isConstant (Derive _ e) = isConstant e
+
 
 {- Examples -}
 -- 1. d/dx (x + y)
@@ -67,9 +96,11 @@ self_rule = Law "Derivative of x" (Derive "x" $ Atom (Var "x"), Atom $ Const 1.0
 
 -- Pre-condition: isConstant a
 -- isConstant :: Expr -> Bool
-const_rule = Law "Derivative of c" (Derive "x" a, Atom $ Const 0.0) 
+const_rule = Claw isConstant $ Law "Derivative of c" (Derive "x" a, Atom $ Const 0.0)
 
-laws = [add_rule, sub_rule, prod_rule, quot_rule, sin_rule, cos_rule, ln_rule, pow_rule, self_rule, const_rule]
+laws = [add_rule, sub_rule, prod_rule, quot_rule, sin_rule, cos_rule, ln_rule, pow_rule, self_rule]
+
+claws = [const_rule] ++ map (Claw alwaysTrue) laws
 
 -- Don't think we need anything below
 {- Example Laws -}
