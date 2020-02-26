@@ -33,6 +33,7 @@ instance Show Expr where
       = showParen (p == 1) (showsPrec 1 e1 . showString " " . showString op . showString " " . showsPrec 1 e2)
 
 
+-- Conditions:
 alwaysTrue :: Expr -> Bool
 alwaysTrue _ = True
 
@@ -46,20 +47,19 @@ isConstant (Derive _ e) = isConstant e
 
 
 {- Examples -}
--- 1. d/dx (x + y)
-ex :: Expr
-ex = Derive "x" $ Binary "+" (Atom $ Var "x") (Atom $ Const 1.0)
+examples :: [Expr]
+examples = [ex1, ex2, ex3]
+
+-- 1. d/dx (x + 1)
+ex1 = Derive "x" $ Binary "+" (Atom $ Var "x") (Atom $ Const 1.0)
+
+-- 2. d/dx (sin (x ^ 2))
+ex2 = Derive "x" $ Unary "sin" (Binary "^" (Atom $ Var "x") (Atom $ Const 2.0))
+
+-- 3. d/dx (x ^ 3)
+ex3 = Derive "x" $ Binary "^" (Atom $ Var "x") (Atom $ Const 3.0)
 
 
--- 1. d/dx (sin (x ^ 2))
-ex1 :: Expr
-ex1 = Derive "x" $ Unary "sin" (Binary "pow" (Atom $ Var "x") (Atom $ Const 2.0))
-
--- 2. Applying chain rule: d/dx (x^2) * cos(x^2)
--- Note: that this exposes that we need to be careful with chain rule... 
--- apply derivative to the outer function while leaving the inner function untouched
-ex2 :: Expr
-ex2 = Binary "*" (Derive "x" $ Binary "pow" (Atom $ Var "x") (Atom $ Const 2.0)) (Unary "cos" $ Binary "pow" (Atom $ Var "x") (Atom $ Const 2.0))
 
 {- Derivative Laws -}
 a, b :: Expr -- Is this a good way to represent arbitrary expressions? These can be replaced by any expression
@@ -88,9 +88,9 @@ cos_rule = Law "Derivative of cos"
 ln_rule = Law "Derivative of ln"
                 (Derive "x" $ Unary "ln" a, Binary "*" (Derive "x" a) (Binary "/" (Atom $ Const 1.0) a))
 
-pow_rule = Law "Derivative of pow"
-                (Derive "x" $ Binary "pow" a b, 
-                    Binary "*" (Binary "pow" a b) (Derive "x" (Binary "*" b (Unary "ln" a))))
+pow_rule = Law "Derivative of ^"
+                (Derive "x" $ Binary "^" a b, 
+                    Binary "*" (Binary "^" a b) (Derive "x" (Binary "*" b (Unary "ln" a))))
 
 self_rule = Law "Derivative of x" (Derive "x" $ Atom (Var "x"), Atom $ Const 1.0)
 
