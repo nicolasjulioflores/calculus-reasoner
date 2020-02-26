@@ -48,7 +48,7 @@ isConstant (Derive _ e) = isConstant e
 
 {- Examples -}
 examples :: [Expr]
-examples = [ex1, ex2, ex3]
+examples = [ex1, ex2, ex3, ex4]
 
 -- 1. d/dx (x + 1)
 ex1 = Derive "x" $ Binary "+" (Atom $ Var "x") (Atom $ Const 1.0)
@@ -59,6 +59,8 @@ ex2 = Derive "x" $ Unary "sin" (Binary "^" (Atom $ Var "x") (Atom $ Const 2.0))
 -- 3. d/dx (x ^ 3)
 ex3 = Derive "x" $ Binary "^" (Atom $ Var "x") (Atom $ Const 3.0)
 
+-- 4. d/dx (x ^ x)
+ex4 = Derive "x" $ Binary "^" (Atom $ Var "x") (Atom $ Var "x")
 
 
 {- Derivative Laws -}
@@ -88,7 +90,7 @@ cos_rule = Law "Derivative of cos"
 ln_rule = Law "Derivative of ln"
                 (Derive "x" $ Unary "ln" a, Binary "*" (Derive "x" a) (Binary "/" (Atom $ Const 1.0) a))
 
-pow_rule = Law "Derivative of ^"
+pow_rule = Law "Derivative of (^)"
                 (Derive "x" $ Binary "^" a b, 
                     Binary "*" (Binary "^" a b) (Derive "x" (Binary "*" b (Unary "ln" a))))
 
@@ -101,22 +103,3 @@ const_rule = Claw isConstant $ Law "Derivative of c" (Derive "x" a, Atom $ Const
 laws = [add_rule, sub_rule, prod_rule, quot_rule, sin_rule, cos_rule, ln_rule, pow_rule, self_rule]
 
 claws = [const_rule] ++ map (Claw alwaysTrue) laws
-
--- Don't think we need anything below
-{- Example Laws -}
-
-
-
--- 1. chain rule: d/dx (f(g(x)) = (d/dx g(x)) * d/dx(f(y)) where y = g(x) 
---  -> how do we express that inside is untouched? Need a way to express "derive this function?"
-chain_rule = Law "Chain Rule" 
-                    (Derive "x" $ Unary "f" $ Unary "g" (Atom $ Var "x"),
-                     Binary "*" (Derive "x" $ Unary "g" (Atom $ Var "x")) (Unary "f'" $ Unary "g" (Atom $ Var "x")))
-
--- Rules: derivative for +, -, *, /, sin, cos, 
--- d/dx (a ^ b) = (a^b) * (d/dx (b * lna))
-
--- How to represent arbitrary constant? 2.0 in LHS should be constant
--- ex_law = Law "Derive (Constant)" (Derive "x" (Atom $ Const 2.0), Atom $ Const 0.0)
-
--- ex_law2 = Law "Derive (Constant * ?)" (Derive "x" $ (Binary "*" (Atom (c :: Float)) (e :: Expr)), Unary "f" (Atom $ Var "x"))
