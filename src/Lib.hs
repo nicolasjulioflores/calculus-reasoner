@@ -45,6 +45,20 @@ isConstant (Unary _ e) = isConstant e
 isConstant (Binary _ e1 e2) = (isConstant e1) && (isConstant e2)
 isConstant (Derive _ e) = isConstant e
 
+isAConstant :: Expr -> Bool
+isAConstant (Atom (Const _)) = True
+isAConstant _ = False
+
+isAZero :: Expr -> Bool
+isAZero (Atom (Const f)) = (f < delta)
+    where delta = 0.00001
+isAZero _ = False
+
+isAOne :: Expr -> Bool
+isAOne (Atom (Const f)) = (f - 1 < delta)
+    where delta = 0.00001
+isAOne _ = False
+
 
 {- Examples -}
 examples :: [Expr]
@@ -100,15 +114,35 @@ self_rule = Law "Derivative of x" (Derive "x" $ Atom (Var "x"), Atom $ Const 1.0
 -- isConstant :: Expr -> Bool
 const_rule = Claw [("a", isConstant)] $ Law "Derivative of c" (Derive "x" a, Atom $ Const 0.0)
 
+laws = [add_rule, sub_rule, prod_rule, quot_rule, sin_rule, cos_rule, ln_rule, pow_rule, self_rule]
+
+
+
+
 -- Lift +, *, -, / to apply to constant expressions
 plus :: Expr -> Expr -> Expr
 plus (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
--- mult (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
+mult (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
 -- sub (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
 -- plus (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
+addition_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
+                    Law "Addition" (Binary "+" a b, a `plus` b)
+multiplication_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
+                    Law "Multiplication" (Binary "*" a b, a `mult` b)
 
--- addition_rule = Claw ("a", isConstant) $ Law "Addition" (Binary "+" a b, a `plus` b)
 
-laws = [add_rule, sub_rule, prod_rule, quot_rule, sin_rule, cos_rule, ln_rule, pow_rule, self_rule]
+times_zero = Claw [("a", isAZero)] $
+                Law "0 * x = 0" (Binary "*" a b, Atom $ Const 0.0)
+times_zero' = Claw [("b", isAZero)] $
+                Law "x * 0 = 0" (Binary "*" a b, Atom $ Const 0.0)
+plus_zero = Claw [("a", isAZero)] $
+                Law "0 + x = x" (Binary "+" a b, b)
+plus_zero' = Claw [("b", isAZero)] $
+                Law "x + 0 = x" (Binary "+" a b, a)
+times_one = Claw [("a", isAOne)] $
+                Law "1 * x = x" (Binary "*" a b, b)
+times_one' = Claw [("b", isAOne)] $
+                Law "x * 1 = x" (Binary "*" a b, a)
 
-claws = [const_rule] ++ map (Claw []) laws
+claws = [const_rule, times_zero, times_zero', plus_zero, plus_zero', times_one, times_one'] ++ 
+        map (Claw []) laws

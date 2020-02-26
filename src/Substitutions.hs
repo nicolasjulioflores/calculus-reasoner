@@ -40,6 +40,11 @@ union sub1@((v1,e1):sub1') sub2@((v2,e2):sub2')
     | v1==v2 = (v1,e1):union sub1' sub2'
     | v1>v2  = (v2,e2):union sub1  sub2'
 
+-- Union if neither are empty
+combine :: Subst -> Subst -> Subst
+combine [] sub2 = emptySub
+combine sub1 [] = emptySub
+combine sub1 sub2 = union sub1 sub2
 
 
 

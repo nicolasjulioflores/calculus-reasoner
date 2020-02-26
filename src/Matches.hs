@@ -13,7 +13,7 @@ mustMatch conds (Derive v1 e1) (Derive v1' e1')
            sub = mustMatch conds e1 e1' 
            variable_sub = unitSub v1 (Atom $ Var v1')
 mustMatch conds (Binary op e1 e2) (Binary op' e1' e2')
-    | op == op' = union (mustMatch conds e1 e1') (mustMatch conds e2 e2')
+    | op == op' = combine (mustMatch conds e1 e1') (mustMatch conds e2 e2')
     | otherwise = emptySub
 mustMatch conds (Unary op e1) (Unary op' e1')
     | op == op' = mustMatch conds e1 e1'
@@ -29,4 +29,7 @@ matchA conds (Var v) e
       where cond_holds = case lookup v conds of 
                            Just cond -> cond e
                            Nothing -> True
--- matchA (Const ?)
+
+-- matchA conds (Const f) (Atom (Const expr_f))
+--   = if (f - expr_f < delta) then 
+-- matchA conds (Const f) _ = emptySub
