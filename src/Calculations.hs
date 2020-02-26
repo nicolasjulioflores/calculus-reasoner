@@ -23,8 +23,8 @@ showStep (why,e)
 calculate :: [Claw] -> Expr -> Calculation
 calculate claws e = Calc e (manyStep rws e)
     where rws e = [(name, e')
-                  | Claw cond (Law name eqn) <- sortedLaws,
-                    e' <- rewrites cond eqn e,
+                  | Claw conds (Law name eqn) <- sortedLaws,
+                    e' <- rewrites conds eqn e,
                     e' /= e]
           sortedLaws = claws
 

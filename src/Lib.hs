@@ -12,12 +12,12 @@ data Atom = Var Variable
           | Const Float deriving Eq
 type Variable = String
 
-data Claw = Claw Condition Law
+data Claw = Claw [Condition] Law
 
 data Law = Law LawName Equation
 type LawName = String
 type Equation = (Expr, Expr)
-type Condition = Expr -> Bool
+type Condition = (Variable, Expr -> Bool)
 
 instance Show Atom where
     showsPrec _ (Var v) = showString v
@@ -98,8 +98,17 @@ self_rule = Law "Derivative of x" (Derive "x" $ Atom (Var "x"), Atom $ Const 1.0
 
 -- Pre-condition: isConstant a
 -- isConstant :: Expr -> Bool
-const_rule = Claw isConstant $ Law "Derivative of c" (Derive "x" a, Atom $ Const 0.0)
+const_rule = Claw [("a", isConstant)] $ Law "Derivative of c" (Derive "x" a, Atom $ Const 0.0)
+
+-- Lift +, *, -, / to apply to constant expressions
+plus :: Expr -> Expr -> Expr
+plus (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
+-- mult (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
+-- sub (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
+-- plus (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
+
+-- addition_rule = Claw ("a", isConstant) $ Law "Addition" (Binary "+" a b, a `plus` b)
 
 laws = [add_rule, sub_rule, prod_rule, quot_rule, sin_rule, cos_rule, ln_rule, pow_rule, self_rule]
 
-claws = [const_rule] ++ map (Claw alwaysTrue) laws
+claws = [const_rule] ++ map (Claw []) laws
