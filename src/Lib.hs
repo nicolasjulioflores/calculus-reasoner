@@ -7,7 +7,21 @@ someFunc = putStrLn "someFunc"
 data Expr = Atom Atom
           | Unary String Expr
           | Binary String Expr Expr
-          | Derive Variable Expr deriving Eq
+          | Derive Variable Expr
+          | Transform Transform
+type Transform = ([(Variable, Expr)] -> Expr)
+
+instance Eq Expr where
+    (Atom a) == (Atom b)
+        = a == b
+    (Unary op e) == (Unary op' e') 
+        = (op == op') && (e == e')
+    (Binary op e1 e2) == (Binary op' e1' e2')
+        = (op == op') && (e1 == e1') && (e2 == e2')
+    (Derive _ e) == (Derive _ e')
+        = (e == e')
+    _ == _ = False -- Note: Transforms should never be compare for equality
+
 data Atom = Var Variable 
           | Const Float deriving Eq
 type Variable = String
@@ -33,9 +47,24 @@ instance Show Expr where
       = showParen (p == 1) (showsPrec 1 e1 . showString " " . showString op . showString " " . showsPrec 1 e2)
 
 
+-- Transforms
+-- sortMult :: Transform
+-- sortMult vs = 
+
+-- Lift +, *, -, / to apply to constant expressions
+-- plus, mult, sub, divi :: Expr -> Expr -> Expr
+-- plus (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
+-- mult (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 * f2)
+-- sub (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 - f2)
+-- divi (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 / f2)
+
 -- Conditions:
 alwaysTrue :: Expr -> Bool
 alwaysTrue _ = True
+
+isAVar :: Expr -> Bool
+isAVar (Atom (Var _)) = True
+isAVar _ = False
 
 isConstant :: Expr -> Bool
 isConstant (Atom a) = case a of
@@ -62,7 +91,7 @@ isAOne _ = False
 
 {- Examples -}
 examples :: [Expr]
-examples = [ex1, ex2, ex3, ex4]
+examples = [ex1, ex2, ex3, ex4, ex5]
 
 -- 1. d/dx (x + 1)
 ex1 = Derive "x" $ Binary "+" (Atom $ Var "x") (Atom $ Const 1.0)
@@ -75,6 +104,12 @@ ex3 = Derive "x" $ Binary "^" (Atom $ Var "x") (Atom $ Const 3.0)
 
 -- 4. d/dx (x ^ x)
 ex4 = Derive "x" $ Binary "^" (Atom $ Var "x") (Atom $ Var "x")
+
+-- 5. d/dx (1 / (x ^ 2))
+ex5 = Derive "x" $ Binary "/" (Atom $ Const 1.0) (Binary "^" (Atom $ Var "x") (Atom $ Const 2.0))
+
+-- 6. d/dx (cos(x) ^ 2)
+ex6 = Derive "x" $ Binary "^" (Unary "cos" (Atom $ Var "x")) (Atom $ Const 2.0)
 
 
 {- Derivative Laws -}
@@ -93,7 +128,10 @@ prod_rule = Law "Derivative of (*)"
                     Binary "+" (Binary "*" (Derive "x" a) b) (Binary "*" a (Derive "x" b)))
 
 quot_rule = Law "Derivative of (/)"
-                (Derive "x" $ Binary "/" a b, a) -- TODO
+                (Derive "x" $ Binary "/" a b, 
+                    Binary "/" 
+                        (Binary "-" (Binary "*" b (Derive "x" a)) (Binary "*" a (Derive "x" b)))
+                        (Binary "^" b (Atom $ Const 2.0)))
 
 sin_rule = Law "Derivative of sin"
                 (Derive "x" $ Unary "sin" a, Binary "*" (Derive "x" a) (Unary "cos" a))
@@ -110,26 +148,30 @@ pow_rule = Law "Derivative of (^)"
 
 self_rule = Law "Derivative of x" (Derive "x" $ Atom (Var "x"), Atom $ Const 1.0)
 
--- Pre-condition: isConstant a
--- isConstant :: Expr -> Bool
+-- Claws:
 const_rule = Claw [("a", isConstant)] $ Law "Derivative of c" (Derive "x" a, Atom $ Const 0.0)
+
+const_pow_rule = Claw [("a", isAVar), ("b", isAConstant)] $
+    Law "Derivative of x^p if p is a constant"
+        (Derive "x" $ Binary "^" a b, 
+            Binary "*" b (Binary "^" a (Binary "-" b (Atom $ Const 1.0))))
 
 laws = [add_rule, sub_rule, prod_rule, quot_rule, sin_rule, cos_rule, ln_rule, pow_rule, self_rule]
 
 
+sub :: Transform
+sub [("a", (Atom (Const f1))), ("b", (Atom (Const f2)))] 
+  = Atom $ Const (f1 - f2)
 
+subtraction_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
+                    Law "Subtraction" (Binary "-" a b, Transform sub)
 
--- Lift +, *, -, / to apply to constant expressions
-plus :: Expr -> Expr -> Expr
-plus (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
-mult (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
--- sub (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
--- plus (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
-addition_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
-                    Law "Addition" (Binary "+" a b, a `plus` b)
-multiplication_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
-                    Law "Multiplication" (Binary "*" a b, a `mult` b)
-
+-- addition_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
+--                     Law "Addition" (Binary "+" a b, a `plus` b)
+-- multiplication_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
+--                     Law "Multiplication" (Binary "*" a b, a `mult` b)
+-- division_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
+--                     Law "Division" (Binary "/" a b, a `divi` b)
 
 times_zero = Claw [("a", isAZero)] $
                 Law "0 * x = 0" (Binary "*" a b, Atom $ Const 0.0)
@@ -144,5 +186,8 @@ times_one = Claw [("a", isAOne)] $
 times_one' = Claw [("b", isAOne)] $
                 Law "x * 1 = x" (Binary "*" a b, a)
 
-claws = [const_rule, times_zero, times_zero', plus_zero, plus_zero', times_one, times_one'] ++ 
+claws = [const_rule, const_pow_rule] ++ 
+        [subtraction_rule] ++ 
+        -- [addition_rule, subtraction_rule, multiplication_rule, division_rule] ++
+        [times_zero, times_zero', plus_zero, plus_zero', times_one, times_one'] ++ 
         map (Claw []) laws
