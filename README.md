@@ -1,5 +1,13 @@
 # calculus-reasoner
 
+## Feb 27
+
+We have included some more examples of problems we're able to solve. Use same method as below. 
+We're working on implementing the arithmetic, and am trying to work out a way to clean up the types
+for Substitution/Equation/Matches/Transform.
+
+## Feb 25
+
 The examples we have derived so far are in src/Lib.hs (see `examples`).
 
 To run the example reasoning:

@@ -11,6 +11,16 @@ data Expr = Atom Atom
           | Transform Transform
 type Transform = ([(Variable, Expr)] -> Expr)
 
+-- RHS of Eqn should just be a Transform??
+-- Transform should have a validator that checks that the substitution matches what it expects...
+--
+-- apply :: ExprBuilder -> Subst -> Expr
+--
+-- ExprBuilder (Subst -> Expr)
+
+-- LHS of Eqn should be an expression matcher
+-- Eqn (Variables, LHS, RHS)
+
 instance Eq Expr where
     (Atom a) == (Atom b)
         = a == b
@@ -46,6 +56,9 @@ instance Show Expr where
     showsPrec p (Binary op e1 e2)
       = showParen (p == 1) (showsPrec 1 e1 . showString " " . showString op . showString " " . showsPrec 1 e2)
 
+
+-- Eqn :: Expr -> Expr
+-- but the # of variables it accepts is parametric
 
 -- Transforms
 -- sortMult :: Transform
@@ -92,6 +105,8 @@ isAOne _ = False
 {- Examples -}
 examples :: [Expr]
 examples = [ex1, ex2, ex3, ex4, ex5]
+
+ex_sin = Unary "sin" (Binary "-" (Atom $ Const 1.0) (Atom $ Const 2.4))
 
 -- 1. d/dx (x + 1)
 ex1 = Derive "x" $ Binary "+" (Atom $ Var "x") (Atom $ Const 1.0)
@@ -161,10 +176,18 @@ laws = [add_rule, sub_rule, prod_rule, quot_rule, sin_rule, cos_rule, ln_rule, p
 
 sub :: Transform
 sub [("a", (Atom (Const f1))), ("b", (Atom (Const f2)))] 
-  = Atom $ Const (f1 - f2)
+    = Atom $ Const (f1 - f2)
 
 subtraction_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
                     Law "Subtraction" (Binary "-" a b, Transform sub)
+
+sin' :: Transform
+sin' [("a", (Atom (Const f)))]
+    = Atom $ Const (sin f)
+
+-- Unary functions
+sin_application = Claw [("a", isAConstant)] $
+                Law "Application of sin" (Unary "sin" a, Transform sin')
 
 -- addition_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
 --                     Law "Addition" (Binary "+" a b, a `plus` b)
@@ -186,8 +209,9 @@ times_one = Claw [("a", isAOne)] $
 times_one' = Claw [("b", isAOne)] $
                 Law "x * 1 = x" (Binary "*" a b, a)
 
+
 claws = [const_rule, const_pow_rule] ++ 
-        [subtraction_rule] ++ 
+        [subtraction_rule, sin_application] ++ 
         -- [addition_rule, subtraction_rule, multiplication_rule, division_rule] ++
         [times_zero, times_zero', plus_zero, plus_zero', times_one, times_one'] ++ 
         map (Claw []) laws
