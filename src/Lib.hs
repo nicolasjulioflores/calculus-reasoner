@@ -106,6 +106,15 @@ isAOne _ = False
 examples :: [Expr]
 examples = [ex1, ex2, ex3, ex4, ex5]
 
+
+ex_z = Unary "sin" (Unary "-" (Atom $ Const 0.0))
+ex_v = Unary "sin" (Unary "-" (Atom $ Var "v"))
+
+zlaws = [zero_law, sin_application]
+
+zero_law = Claw [("a", isAZero)] $
+                Law "-0 = 0" (Unary "-" a, Atom $ Const 0.0)
+
 ex_sin = Unary "sin" (Binary "-" (Atom $ Const 1.0) (Atom $ Const 2.4))
 
 -- 1. d/dx (x + 1)
