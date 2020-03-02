@@ -1,0 +1,75 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 6f438849af577532c0cff785e1a466f8c1b5f208bd5da03e8b127bcdb0845ae1
+
+name:           calculus-reasoner
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/calculus-reasoner#readme>
+homepage:       https://github.com/githubuser/calculus-reasoner#readme
+bug-reports:    https://github.com/githubuser/calculus-reasoner/issues
+author:         Nick Flores & Jalen Wang 
+maintainer:     https://github.com/nicolasjulioflores/calculus-reasoner/
+copyright:      2020 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/calculus-reasoner
+
+library
+  exposed-modules:
+      Calculations
+      Lib
+      Matches
+      Parser
+      Rewrites
+      Substitutions
+      Parser
+  other-modules:
+      Paths_calculus_reasoner
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , parser-combinators >= 1.0.0
+    , megaparsec >=5.0.0 && < 9
+  default-language: Haskell2010
+
+executable calculus-reasoner-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_calculus_reasoner
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , calculus-reasoner
+    , ghc >= 8.8.2
+    , parser-combinators >= 1.0.0
+    , megaparsec >=5.0.0 && < 9
+
+  default-language: Haskell2010
+
+test-suite calculus-reasoner-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_calculus_reasoner
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , calculus-reasoner
+    , megaparsec >=5.0.0 && < 9
+  default-language: Haskell2010
