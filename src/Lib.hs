@@ -92,12 +92,12 @@ isAConstant (Atom (Const _)) = True
 isAConstant _ = False
 
 isAZero :: Expr -> Bool
-isAZero (Atom (Const f)) = (f < delta)
+isAZero (Atom (Const f)) = (f < delta) && (f > -delta)
     where delta = 0.00001
 isAZero _ = False
 
 isAOne :: Expr -> Bool
-isAOne (Atom (Const f)) = (f - 1 < delta)
+isAOne (Atom (Const f)) = (f - 1 < delta) && (f - 1 > -delta)
     where delta = 0.00001
 isAOne _ = False
 
@@ -137,9 +137,10 @@ ex6 = Derive "x" $ Binary "^" (Unary "cos" (Atom $ Var "x")) (Atom $ Const 2.0)
 
 
 {- Derivative Laws -}
-a, b :: Expr -- Is this a good way to represent arbitrary expressions? These can be replaced by any expression
+a, b, c :: Expr -- Is this a good way to represent arbitrary expressions? These can be replaced by any expression
 a = Atom $ Var "a"
 b = Atom $ Var "b"
+c = Atom $ Var "c"
 
 add_rule = Law "Derivative of (+)"
                 (Derive "x" $ Binary "+" a b, Binary "+" (Derive "x" a) (Derive "x" b))
@@ -180,8 +181,29 @@ const_pow_rule = Claw [("a", isAVar), ("b", isAConstant)] $
         (Derive "x" $ Binary "^" a b, 
             Binary "*" b (Binary "^" a (Binary "-" b (Atom $ Const 1.0))))
 
-laws = [add_rule, sub_rule, prod_rule, quot_rule, sin_rule, cos_rule, ln_rule, pow_rule, self_rule]
+-- Arithmetic laws
+mult_div_rule = Law "a * (b / c) = (a * b) / c"
+                    (Binary "*" a (Binary "/" b c), Binary "/" (Binary "*" a b) c)
 
+double_pow_rule = Law "(a ^ b) ^ c = a ^ (b * c)"
+                    (Binary "^" (Binary "^" a b) c, Binary "^" a (Binary "*" b c))
+
+laws = [add_rule, sub_rule, prod_rule, quot_rule, sin_rule, cos_rule, ln_rule, pow_rule, self_rule] ++
+        [mult_div_rule, double_pow_rule]
+
+-- Arithmetic Claws
+negate_rule = Claw [("a", isAZero)] $
+                Law "0 - x = -x" (Binary "-" a b, Unary "-" b)
+
+basic_claws = [const_rule, const_pow_rule, negate_rule]
+
+-- Constant arithmetic rules:
+add :: Transform
+add [("a", (Atom (Const f1))), ("b", (Atom (Const f2)))]
+    = Atom $ Const (f1 + f2)
+
+addition_rule = Claw [("a", isAConstant), ("b", isAConstant)] $
+                    Law "Addition" (Binary "+" a b, Transform add)
 
 sub :: Transform
 sub [("a", (Atom (Const f1))), ("b", (Atom (Const f2)))] 
@@ -190,21 +212,44 @@ sub [("a", (Atom (Const f1))), ("b", (Atom (Const f2)))]
 subtraction_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
                     Law "Subtraction" (Binary "-" a b, Transform sub)
 
+mult :: Transform
+mult [("a", (Atom (Const f1))), ("b", (Atom (Const f2)))]
+    = Atom $ Const (f1 * f2)
+
+multiplication_rule = Claw [("a", isAConstant), ("b", isAConstant)] $
+                        Law "Multiplication" (Binary "*" a b, Transform mult)
+
+divi :: Transform
+divi [("a", (Atom (Const f1))), ("b", (Atom (Const f2)))]
+    = Atom $ Const (f1 / f2)
+
+division_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
+                    Law "Division" (Binary "/" a b, Transform divi)
+
+-- Unary functions
 sin' :: Transform
 sin' [("a", (Atom (Const f)))]
     = Atom $ Const (sin f)
 
--- Unary functions
 sin_application = Claw [("a", isAConstant)] $
                 Law "Application of sin" (Unary "sin" a, Transform sin')
 
--- addition_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
---                     Law "Addition" (Binary "+" a b, a `plus` b)
--- multiplication_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
---                     Law "Multiplication" (Binary "*" a b, a `mult` b)
--- division_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
---                     Law "Division" (Binary "/" a b, a `divi` b)
+cos' :: Transform
+cos' [("a", (Atom (Const f)))]
+    = Atom $ Const (cos f)
 
+cos_application = Claw [("a", isAConstant)] $
+                Law "Application of cos" (Unary "cos" a, Transform cos')
+
+-- Note: 'log x' returns natural log (http://zvon.org/other/haskell/Outputprelude/log_f.html)
+log' :: Transform
+log' [("a", (Atom (Const f)))]
+    = Atom $ Const (log f)
+
+log_application = Claw [("a", isAConstant)] $
+                Law "Application of log" (Unary "log" a, Transform log')
+
+-- Certain constants applied to variables
 times_zero = Claw [("a", isAZero)] $
                 Law "0 * x = 0" (Binary "*" a b, Atom $ Const 0.0)
 times_zero' = Claw [("b", isAZero)] $
@@ -217,10 +262,98 @@ times_one = Claw [("a", isAOne)] $
                 Law "1 * x = x" (Binary "*" a b, b)
 times_one' = Claw [("b", isAOne)] $
                 Law "x * 1 = x" (Binary "*" a b, a)
+power_zero = Claw [("b", isAZero)] $
+                Law "x ^ 0 = 1" (Binary "^" a b, Atom $ Const 1.0)
+power_one = Claw [("b", isAOne)] $
+                Law "x ^ 1 = x" (Binary "^" a b, a)
+
+{- Combining like terms -}
+
+-- Combine powers
+powerGroupable :: Expr -> Bool
+powerGroupable (Binary "*" (Binary "^" a c) (Binary "^" b d))
+    = canGroupTwo a b
+powerGroupable (Binary "*" (Binary "^" a c) b)
+    = canGroupTwo a b
+powerGroupable (Binary "*" a (Binary "^" b d))
+    = canGroupTwo a b
+powerGroupable (Binary "*" a b)
+    = canGroupTwo a b
+powerGroupable _ = False
+
+canGroupTwo (Unary op e) (Unary op' e')
+    = (op == op') && canGroupTwo e e'
+canGroupTwo (Atom (Var a)) (Atom (Var b))
+    = (a == b)
+canGroupTwo _ _ = False
+
+powerGroup :: Transform
+powerGroup [("a", Binary "*" (Binary "^" a c) (Binary "^" b d))] 
+    = Binary "^" a (Binary "+" c d)
+powerGroup [("a", Binary "*" (Binary "^" a c) b)]
+    = Binary "^" a (Binary "+" c (Atom $ Const 1.0))
+powerGroup [("a", Binary "*" a (Binary "^" b d))]
+    = Binary "^" a (Binary "+" d (Atom $ Const 1.0))
+powerGroup [("a", Binary "*" a b)]
+    = Binary "^" a (Atom $ Const 2.0)
+
+power_group_law = Claw [("a", powerGroupable)] $ 
+                    Law "(x ^ n) * (x ^ m) = x ^ (n + m)" (a, Transform powerGroup)
+
+groupable :: Expr -> Bool
+groupable (Binary "*" a b) = groupable' a b
+groupable _ = False
+
+groupable' :: Expr -> Expr -> Bool
+groupable' (Binary "*" a c) b
+    = (rearrangeable a b) || (rearrangeable c b) 
+        || (groupable' a b) || (groupable' a c) || (groupable' b c)
+groupable' a (Binary "*" b d)
+    = (rearrangeable a b) || (rearrangeable a d)
+        || (groupable' a b) || (groupable' a d) || (groupable' b d)
+groupable' _ _ = False
+
+-- NOTE: This is used as a base-case. We should move a multiplicative expression around if this
+-- condition holds. Note that we need to separate this case out because we don't want to rearrange
+-- Binary "*" (Binary "*" a c) b if the condition holds for a and c. Because this would mean the
+-- rule would match expressions which DON'T need to be rearranged. Yet we still want to check 
+-- the subtrees of a and c to check if they have expressions that would like to be rearranged.
+rearrangeable a b
+    = powerGroupable (Binary "*" a b) || (isAConstant a && isAConstant b)
+
+group :: Transform
+group [("a", (Binary "*" a b))] = group' a b
+
+group' :: Expr -> Expr -> Expr
+group' (Binary "*" a c) b
+    = if rearrangeable a b then Binary "*" (Binary "*" a b) c
+      else if rearrangeable c b then Binary "*" (Binary "*" c b) a
+      else if groupable' a b then Binary "*" (group' a b) c
+      else if groupable' a c then Binary "*" (group' a c) b
+      else Binary "*" a (group' b c)
+group' a (Binary "*" b d)
+    = if rearrangeable a b then Binary "*" (Binary "*" a b) d
+      else if rearrangeable a d then Binary "*" (Binary "*" a d) b 
+      else if groupable' a b then Binary "*" (group' a b) d
+      else if groupable' a d then Binary "*" (group' a d) b 
+      else Binary "*" a (group' b d)
+
+mult_group_law = Claw [("a", groupable)] $ 
+                    Law "Rearranging terms (*)" (a, Transform group)
+
+-- These laws should be applied last because they are mostly attempts to separate out terms so
+-- they can be matched by other laws.
+divisor_up = Claw [] $ 
+                Law "a / b = a * (b ^ -1)" (Binary "/" a b, Binary "*" a (Binary "^" b (Atom $ Const (-1.0))))
+
+unary_apply = Claw [] $ 
+                Law "-a = -1 * a" (Unary "-" a, Binary "*" (Atom $ Const (-1.0)) a)
 
 
-claws = [const_rule, const_pow_rule] ++ 
-        [subtraction_rule, sin_application] ++ 
-        -- [addition_rule, subtraction_rule, multiplication_rule, division_rule] ++
-        [times_zero, times_zero', plus_zero, plus_zero', times_one, times_one'] ++ 
-        map (Claw []) laws
+claws = basic_claws ++  
+        map (Claw []) laws ++ 
+        [subtraction_rule, addition_rule, multiplication_rule, division_rule] ++ 
+        [sin_application, cos_application, log_application] ++ 
+        [power_group_law, mult_group_law] ++ 
+        [times_zero, times_zero', plus_zero, plus_zero', times_one, times_one', power_one, power_zero] ++ 
+        [unary_apply, divisor_up]
