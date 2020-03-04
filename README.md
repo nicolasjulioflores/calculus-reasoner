@@ -1,5 +1,12 @@
 # calculus-reasoner
 
+## Mar 3
+Our special extension is that we can reduce a wide range of expressions (using the Transform rules).
+For example, all the examples that we have provided (run using the approach shown below) will be
+reduced as much as they possibly can.
+
+We'd like to get your feedback on anything that we should change before the final submission.
+
 ## Feb 27
 
 We have included some more examples of problems we're able to solve. Use same method as below. 
