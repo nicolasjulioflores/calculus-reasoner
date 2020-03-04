@@ -1,4 +1,5 @@
 .stack-work/
-calculus-reasoner.cabal
 *~
 *.swp
+package.yaml
+
