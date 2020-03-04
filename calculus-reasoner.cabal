@@ -4,16 +4,16 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5011933b536c55ca4c85903c04f0888d876cb5cf4c9517dd634b6de36b2e0366
+-- hash: 6f438849af577532c0cff785e1a466f8c1b5f208bd5da03e8b127bcdb0845ae1
 
 name:           calculus-reasoner
 version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/githubuser/calculus-reasoner#readme>
 homepage:       https://github.com/githubuser/calculus-reasoner#readme
 bug-reports:    https://github.com/githubuser/calculus-reasoner/issues
-author:         Nicolas Flores and Jalen Wang 
-maintainer:     
-copyright:      2020 Nicolas Flores and Jalen Wang
+author:         Nick Flores & Jalen Wang 
+maintainer:     https://github.com/nicolasjulioflores/calculus-reasoner/
+copyright:      2020 Nick Flores & Jalen Wang
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
@@ -27,14 +27,21 @@ source-repository head
 
 library
   exposed-modules:
+      Calculations
       Lib
-      , Calculations
+      Matches
+      Parser
+      Rewrites
+      Substitutions
+      Parser
   other-modules:
       Paths_calculus_reasoner
   hs-source-dirs:
       src
   build-depends:
       base >=4.7 && <5
+    , parser-combinators >= 1.0.0
+    , megaparsec >=5.0.0 && < 9
   default-language: Haskell2010
 
 executable calculus-reasoner-exe
@@ -47,6 +54,9 @@ executable calculus-reasoner-exe
   build-depends:
       base >=4.7 && <5
     , calculus-reasoner
+    , ghc >= 8.8.2
+    , parser-combinators >= 1.0.0
+    , megaparsec >=5.0.0 && < 9
   default-language: Haskell2010
 
 test-suite calculus-reasoner-test
@@ -60,4 +70,5 @@ test-suite calculus-reasoner-test
   build-depends:
       base >=4.7 && <5
     , calculus-reasoner
+    , megaparsec >=5.0.0 && < 9
   default-language: Haskell2010
