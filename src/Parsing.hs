@@ -3,7 +3,7 @@
 -- Citation: http://docs.restyled.io/restyler/parser-combinators-1.1.0/Control-Monad-Combinators-Expr.html
 
 
-module Parser where
+module Parsing where
 
 
 --import Control.Monad
