@@ -6,6 +6,12 @@ import Parsing
 import Text.Megaparsec
 
 main :: IO ()
-main = do l <- getLine
-          e <- parseTest expr l
-          putStrLn (show e)
+main = do putStrLn "Enter expression: " 
+          l <- getLine
+          _ <- eval l
+          return ()
+
+eval :: String -> IO ()
+eval s = case parseMaybe expr s of
+            Just e -> print (calculate claws e)
+            Nothing -> putStrLn "Parse error"
