@@ -40,6 +40,7 @@ pAtom = Atom <$> pInteger <|> Atom <$> pVariable
 -- a wrapper for lexemes that picks up all trailing white space using the supplied space consumer.
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc
+
 -- a parser that matches given text using string internally and then similarly picks up all trailing white space.
 symbol :: String -> Parser String
 symbol = L.symbol sc
@@ -48,8 +49,10 @@ symbol = L.symbol sc
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
+-- Give derive higher precendence, otherwise the variable parser will mistake the word 'derive'
+-- for a variable.
 expr :: Parser Expr
-expr = space*> (makeExprParser term table)
+expr = space*> (derive <|> makeExprParser term table)
 
 term :: ParsecT Void String Identity Expr
 term = space*> (parens expr  <|> pAtom)
@@ -74,4 +77,9 @@ binary  name = InfixL (Binary <$> symbol name)
 prefix :: String -> Operator (ParsecT Void String Identity) Expr
 prefix  name = Prefix  (Unary <$> symbol name)
 
+derive :: Parser Expr
+derive = do _ <- string "derive ";
+            (Var v) <- pVariable;
+            e <- expr;
+            return (Derive v e)
 
