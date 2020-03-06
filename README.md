@@ -1,5 +1,14 @@
 # calculus-reasoner
 
+## Mar 5
+
+For this submission, we would appreciate any feedback on how to improve our project such that we meet the requirements in the rubric. We aim do get as many of the 30 points as possible and would love to know what we are missing and how we might score at the moment. 
+
+New ways to run our program
+1. Added a test file that will run pre-determined formnulas. At the command line enter: `stack test`
+2. Added a main file that will take user input, parse the input, then return the derivative. At the command line enter: `derive x x+2` for example. You must follow this format with `derive`, `your variable`, and `the equation`
+
+
 ## Mar 3
 Our special extension is that we can reduce a wide range of expressions (using the Transform rules).
 For example, all the examples that we have provided (run using the approach shown below) will be
