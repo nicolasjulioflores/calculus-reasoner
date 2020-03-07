@@ -1,8 +1,13 @@
 # Changelog for calculus-reasoner
 
+## Mar 6
+1. Added comments
+2. Fixed Readme & Changelog
+3. Made Lib for "elegant" 
+
 ## Mar 5
 Changes:
-1.  Updated Parser to account for derive 
+1. Updated Parser to account for derive 
 2. Created a main function such that `stack run` works
 3. Created a test function such that `stack test` works 
 
