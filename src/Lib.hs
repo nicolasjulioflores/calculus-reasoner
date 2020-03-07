@@ -1,8 +1,5 @@
 module Lib where
 
-someFunc :: IO ()
-someFunc = putStrLn "someFunc"
-
 {- Datatypes -}
 data Expr = Atom Atom
           | Unary String Expr
@@ -10,16 +7,6 @@ data Expr = Atom Atom
           | Derive Variable Expr
           | Transform Transform
 type Transform = ([(Variable, Expr)] -> Expr)
-
--- RHS of Eqn should just be a Transform??
--- Transform should have a validator that checks that the substitution matches what it expects...
---
--- apply :: ExprBuilder -> Subst -> Expr
---
--- ExprBuilder (Subst -> Expr)
-
--- LHS of Eqn should be an expression matcher
--- Eqn (Variables, LHS, RHS)
 
 instance Eq Expr where
     (Atom a) == (Atom b)
@@ -57,20 +44,6 @@ instance Show Expr where
       = showParen (p == 1) (showsPrec 1 e1 . showString " " . showString op . showString " " . showsPrec 1 e2)
 
 
--- Eqn :: Expr -> Expr
--- but the # of variables it accepts is parametric
-
--- Transforms
--- sortMult :: Transform
--- sortMult vs = 
-
--- Lift +, *, -, / to apply to constant expressions
--- plus, mult, sub, divi :: Expr -> Expr -> Expr
--- plus (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 + f2)
--- mult (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 * f2)
--- sub (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 - f2)
--- divi (Atom (Const f1)) (Atom (Const f2)) = Atom $ Const (f1 / f2)
-
 -- Conditions:
 alwaysTrue :: Expr -> Bool
 alwaysTrue _ = True
@@ -100,41 +73,6 @@ isAOne :: Expr -> Bool
 isAOne (Atom (Const f)) = (f - 1 < delta) && (f - 1 > -delta)
     where delta = 0.00001
 isAOne _ = False
-
-
-{- Examples -}
-examples :: [Expr]
-examples = [ex1, ex2, ex3, ex4, ex5]
-
-
-ex_z = Unary "sin" (Unary "-" (Atom $ Const 0.0))
-ex_v = Unary "sin" (Unary "-" (Atom $ Var "v"))
-
-zlaws = [zero_law, sin_application]
-
-zero_law = Claw [("a", isAZero)] $
-                Law "-0 = 0" (Unary "-" a, Atom $ Const 0.0)
-
-ex_sin = Unary "sin" (Binary "-" (Atom $ Const 1.0) (Atom $ Const 2.4))
-
--- 1. d/dx (x + 1)
-ex1 = Derive "x" $ Binary "+" (Atom $ Var "x") (Atom $ Const 1.0)
-
--- 2. d/dx (sin (x ^ 2))
-ex2 = Derive "x" $ Unary "sin" (Binary "^" (Atom $ Var "x") (Atom $ Const 2.0))
-
--- 3. d/dx (x ^ 3)
-ex3 = Derive "x" $ Binary "^" (Atom $ Var "x") (Atom $ Const 3.0)
-
--- 4. d/dx (x ^ x)
-ex4 = Derive "x" $ Binary "^" (Atom $ Var "x") (Atom $ Var "x")
-
--- 5. d/dx (1 / (x ^ 2))
-ex5 = Derive "x" $ Binary "/" (Atom $ Const 1.0) (Binary "^" (Atom $ Var "x") (Atom $ Const 2.0))
-
--- 6. d/dx (cos(x) ^ 2)
-ex6 = Derive "x" $ Binary "^" (Unary "cos" (Atom $ Var "x")) (Atom $ Const 2.0)
-
 
 {- Derivative Laws -}
 a, b, c :: Expr -- Is this a good way to represent arbitrary expressions? These can be replaced by any expression
@@ -198,56 +136,16 @@ negate_rule = Claw [("a", isAZero)] $
 basic_claws = [const_rule, const_pow_rule, negate_rule]
 
 -- Constant arithmetic rules:
-add :: Transform
-add [("a", (Atom (Const f1))), ("b", (Atom (Const f2)))]
-    = Atom $ Const (f1 + f2)
-
-addition_rule = Claw [("a", isAConstant), ("b", isAConstant)] $
-                    Law "Addition" (Binary "+" a b, Transform add)
-
-sub :: Transform
-sub [("a", (Atom (Const f1))), ("b", (Atom (Const f2)))] 
-    = Atom $ Const (f1 - f2)
-
-subtraction_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
-                    Law "Subtraction" (Binary "-" a b, Transform sub)
-
-mult :: Transform
-mult [("a", (Atom (Const f1))), ("b", (Atom (Const f2)))]
-    = Atom $ Const (f1 * f2)
-
-multiplication_rule = Claw [("a", isAConstant), ("b", isAConstant)] $
-                        Law "Multiplication" (Binary "*" a b, Transform mult)
-
-divi :: Transform
-divi [("a", (Atom (Const f1))), ("b", (Atom (Const f2)))]
-    = Atom $ Const (f1 / f2)
-
-division_rule = Claw [("a", isAConstant), ("b", isAConstant)] $ 
-                    Law "Division" (Binary "/" a b, Transform divi)
+binary_app :: String -> (Float -> Float -> Float) -> Claw
+binary_app name opr = Claw [("a", isAConstant), ("b", isAConstant)] $
+                        Law ("Binary application: " ++ name) (Binary name a b, Transform t_binary_app) 
+                            where t_binary_app [("a", (Atom (Const f1))), ("b", Atom (Const f2))] = Atom $ Const (opr f1 f2)
 
 -- Unary functions
-sin' :: Transform
-sin' [("a", (Atom (Const f)))]
-    = Atom $ Const (sin f)
-
-sin_application = Claw [("a", isAConstant)] $
-                Law "Application of sin" (Unary "sin" a, Transform sin')
-
-cos' :: Transform
-cos' [("a", (Atom (Const f)))]
-    = Atom $ Const (cos f)
-
-cos_application = Claw [("a", isAConstant)] $
-                Law "Application of cos" (Unary "cos" a, Transform cos')
-
--- Note: 'log x' returns natural log (http://zvon.org/other/haskell/Outputprelude/log_f.html)
-log' :: Transform
-log' [("a", (Atom (Const f)))]
-    = Atom $ Const (log f)
-
-log_application = Claw [("a", isAConstant)] $
-                Law "Application of log" (Unary "log" a, Transform log')
+unary_app :: String -> (Float -> Float) -> Claw
+unary_app name opr = Claw [("a", isAConstant)] $
+                        Law ("Unary application: " ++ name) (Unary name a, Transform t_unary_app)
+                            where t_unary_app [("a", (Atom (Const f)))] = Atom $ Const (opr f)
 
 -- Certain constants applied to variables
 times_zero = Claw [("a", isAZero)] $
@@ -349,11 +247,12 @@ divisor_up = Claw [] $
 unary_apply = Claw [] $ 
                 Law "-a = -1 * a" (Unary "-" a, Binary "*" (Atom $ Const (-1.0)) a)
 
-
 claws = basic_claws ++  
         map (Claw []) laws ++ 
-        [subtraction_rule, addition_rule, multiplication_rule, division_rule] ++ 
-        [sin_application, cos_application, log_application] ++ 
+        (zipWith binary_app ["+", "-", "*", "/"] [(+), (-), (*), (/)]) ++
+        -- [subtraction_rule, addition_rule, multiplication_rule, division_rule] ++ 
+        (zipWith unary_app ["sin", "cos", "ln"] [sin, cos, log]) ++
+        -- [sin_application, cos_application, log_application] ++ 
         [power_group_law, mult_group_law] ++ 
         [times_zero, times_zero', plus_zero, plus_zero', times_one, times_one', power_one, power_zero] ++ 
         [unary_apply, divisor_up]
